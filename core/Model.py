@@ -1,17 +1,16 @@
-import os
 import sys
+import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from nn.Activations import Sigmoid
-from nn.ConvLayers import Convolutional, Flatten, MaxPool
-from nn.Layers import Dense
-from nn.Losses import CategoricalCrossEntropy
-
+from utils.ConvLayers import Convolutional, MaxPool, Flatten
+from utils.Activations import Sigmoid
+from utils.Layers import Dense
+from utils.Losses import CategoricalCrossEntropy
 # from utils.Optimizers import SGD
 
 
-class LeNet:
+class LeNet: 
     def __init__(self):
         # Convolutional Layers
         self.conv1 = Convolutional(in_channels=1, out_channels=6, kernel_size=(5, 5), padding=2)
@@ -20,7 +19,7 @@ class LeNet:
         self.conv2 = Convolutional(in_channels=6, out_channels=16, kernel_size=(5, 5))
         self.activation2 = Sigmoid()
         self.maxpool2 = MaxPool(kernel_size=(2, 2))
-
+        
         # FeedForward Layers
         self.flatten = Flatten()
         self.dense1 = Dense(n_inputs=400, n_neurons=120)
@@ -31,7 +30,7 @@ class LeNet:
 
         # Loss Layer
         self.loss_activation = CategoricalCrossEntropy()
-
+    
     def forward(self, X, y, type='train'):
         # Convolutional Layers (inputs.shape = (batch_size, in_channels, img_height, img_width))
         self.conv1.forward(X)
