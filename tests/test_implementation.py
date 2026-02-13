@@ -1,8 +1,7 @@
 import numpy as np
-
 from nn.activations import ReLU, Sigmoid, Softmax
-from nn.layers import Conv2D, Dense, Dropout, Flatten, MaxPool2D
-from nn.losses import CategoricalCrossEntropyLoss
+from nn.layers import Conv2D, Conv2DOptimized, Dense, Dropout, Flatten, MaxPool2D
+from nn.losses import BinaryCrossEntropyLoss, CategoricalCrossEntropyLoss
 from nn.optimizers import SGD, Adam
 
 
@@ -27,6 +26,29 @@ def test_conv2d():
     assert conv.dW.shape == conv.W.shape, f"Expected weight gradient shape {conv.W.shape}, got {conv.dW.shape}"
 
     print("Conv2D test passed")
+
+
+def test_conv2d_optimized():
+    print("Testing Optimized Conv2D...")
+
+    batch_size = 2
+    n_channels = 3
+    height, width = 8, 8
+    n_filters = 4
+    kernel_size = 3
+
+    conv = Conv2DOptimized(n_filters=n_filters, kernel_size=kernel_size, n_channels=n_channels, stride=1, padding=1)
+    X = np.random.randn(batch_size, n_channels, height, width)
+
+    conv.forward(X)
+    assert conv.output.shape == (batch_size, n_filters, height, width), f"Expected shape {(batch_size, n_filters, height, width)}, got {conv.output.shape}"
+
+    dout = np.random.randn(*conv.output.shape)
+    conv.backward(dout)
+    assert conv.dinputs.shape == X.shape, f"Expected gradient shape {X.shape}, got {conv.dinputs.shape}"
+    assert conv.dW.shape == conv.W.shape, f"Expected weight gradient shape {conv.W.shape}, got {conv.dW.shape}"
+
+    print("Optimized Conv2D test passed")
 
 
 def test_maxpool2d():
@@ -143,8 +165,8 @@ def test_softmax():
     print("Softmax test passed")
 
 
-def test_cross_entropy_loss():
-    print("Testing CrossEntropyLoss...")
+def test_categorical_cross_entropy_loss():
+    print("Testing CategoricalCrossEntropyLoss...")
 
     criterion = CategoricalCrossEntropyLoss()
 
@@ -158,7 +180,25 @@ def test_cross_entropy_loss():
     criterion.backward()
     assert criterion.dinputs.shape == logits.shape, "Gradient shape should match input shape"
 
-    print(f"CrossEntropyLoss test passed (loss: {loss:.4f})")
+    print(f"CategoricalCrossEntropyLoss test passed (loss: {loss:.4f})")
+
+
+def test_binary_cross_entropy_loss():
+    print("Testing BinaryCrossEntropyLoss...")
+
+    criterion = BinaryCrossEntropyLoss()
+
+    logits = np.array([[2.0], [0.5], [-1.0], [1.5]])
+    targets = np.array([[1.0], [1.0], [0.0], [0.0]])
+
+    loss = criterion.forward(logits, targets)
+    assert isinstance(loss, (float, np.floating)), "Loss should be a scalar"
+    assert loss > 0, "Loss should be positive"
+
+    criterion.backward()
+    assert criterion.dinputs.shape == logits.shape, "Gradient shape should match input shape"
+
+    print(f"BinaryCrossEntropyLoss test passed (loss: {loss:.4f})")
 
 
 def test_sgd_optimizer():
@@ -215,34 +255,32 @@ def test_dropout():
     print("Dropout test passed")
 
 
-def run_all_tests():
-    print("Running CNN Implementation Tests")
+## Tests
+print("Running CNN Implementation Tests")
+print("-"*50)
+
+try:
+    test_conv2d()
+    test_conv2d_optimized()
+    test_maxpool2d()
+    test_flatten()
+    test_dense()
+    test_relu()
+    test_sigmoid()
+    test_softmax()
+    test_categorical_cross_entropy_loss()
+    test_binary_cross_entropy_loss()
+    test_sgd_optimizer()
+    test_adam_optimizer()
+    test_dropout()
+
+    print("\nALL TESTS PASSED!")
     print("-"*50)
+    print("The CNN implementation is working correctly!")
 
-    try:
-        test_conv2d()
-        test_maxpool2d()
-        test_flatten()
-        test_dense()
-        test_relu()
-        test_sigmoid()
-        test_softmax()
-        test_cross_entropy_loss()
-        test_sgd_optimizer()
-        test_adam_optimizer()
-        test_dropout()
-
-        print("\nALL TESTS PASSED!")
-        print("-"*50)
-        print("The CNN implementation is working correctly!")
-
-    except AssertionError as e:
-        print(f"\n Test failed: {e}")
-        raise
-    except Exception as e:
-        print(f"\n Unexpected error: {e}")
-        raise
-
-
-if __name__ == "__main__":
-    run_all_tests()
+except AssertionError as e:
+    print(f"\n Test failed: {e}")
+    raise
+except Exception as e:
+    print(f"\n Unexpected error: {e}")
+    raise

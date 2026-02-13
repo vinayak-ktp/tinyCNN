@@ -21,7 +21,7 @@ def load_image(path, target_size=(64, 64), normalize=True):
 
 def load_dataset_from_directory(directory, target_size=(64, 64), normalize=True, max_samples=None):
     # directory structure : directory/class1/*
-    #                                /class2/*
+    #                                /class2/*   ...and so on
     directory = Path(directory)
     class_names = sorted([d.name for d in directory.iterdir() if d.is_dir()])
 

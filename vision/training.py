@@ -6,7 +6,7 @@ from utils.data import create_batches
 
 
 def train_cnn(
-    model,
+    cnn,
     optimizer,
     criterion,
     X_train,
@@ -32,13 +32,13 @@ def train_cnn(
         n_train_batches = 0
 
         for X_batch, y_batch in create_batches(X_train, y_train, batch_size, shuffle=True):
-            model.forward(X_batch, training=True)
-            loss = criterion.forward(model.output, y_batch)
+            cnn.forward(X_batch, training=True)
+            loss = criterion.forward(cnn.output, y_batch)
 
             criterion.backward()
-            model.backward(criterion.dinputs)
+            cnn.backward(criterion.dinputs)
 
-            for i, layer in enumerate(model.layers):
+            for i, layer in enumerate(cnn.layers):
                 if hasattr(layer, 'W'):
                     optimizer.update_params(layer)
 
@@ -52,7 +52,7 @@ def train_cnn(
         train_loss /= n_train_batches
         train_acc = train_correct / len(y_train)
 
-        val_loss, val_acc = evaluate_cnn(model, criterion, X_val, y_val, batch_size)
+        val_loss, val_acc = evaluate_cnn(cnn, criterion, X_val, y_val, batch_size)
 
         history['train_loss'].append(train_loss)
         history['train_acc'].append(train_acc)
@@ -69,14 +69,14 @@ def train_cnn(
     return history
 
 
-def evaluate_cnn(model, criterion, X, y, batch_size=32):
+def evaluate_cnn(cnn, criterion, X, y, batch_size=32):
     total_loss = 0
     correct = 0
     n_batches = 0
 
     for X_batch, y_batch in create_batches(X, y, batch_size, shuffle=False):
-        model.forward(X_batch, training=False)
-        loss = criterion.forward(model.output, y_batch)
+        cnn.forward(X_batch, training=False)
+        loss = criterion.forward(cnn.output, y_batch)
 
         total_loss += loss
         predictions = np.argmax(criterion.predictions, axis=1)
@@ -89,14 +89,14 @@ def evaluate_cnn(model, criterion, X, y, batch_size=32):
     return avg_loss, accuracy
 
 
-def predict_cnn(model, X, batch_size=32):
+def predict_cnn(cnn, X, batch_size=32):
     predictions = []
 
     for i in range(0, len(X), batch_size):
         X_batch = X[i:i+batch_size]
-        model.forward(X_batch, training=False)
+        cnn.forward(X_batch, training=False)
 
-        batch_preds = np.argmax(model.output, axis=1)
+        batch_preds = np.argmax(cnn.output, axis=1)
         predictions.extend(batch_preds)
 
     return np.array(predictions)

@@ -4,6 +4,7 @@ import numpy as np
 from nn.losses import CategoricalCrossEntropyLoss
 from nn.optimizers import Adam
 from utils.data import generate_synthetic_data, train_val_split
+from utils.optimization import optimize_conv_layers
 from vision.models import TinyCNN
 from vision.training import evaluate_cnn, predict_cnn, train_cnn
 
@@ -41,6 +42,8 @@ print(f"Validation samples: {len(X_val)}")
 print("\nCreating TinyCNN model...")
 input_shape = (3, IMAGE_SIZE[0], IMAGE_SIZE[1])
 cnn = TinyCNN(input_shape=input_shape, n_classes=N_CLASSES)
+
+optimize_conv_layers(cnn)
 
 criterion = CategoricalCrossEntropyLoss()
 optimizer = Adam(learning_rate=LEARNING_RATE)
@@ -84,7 +87,7 @@ ax2.legend()
 ax2.grid(alpha=0.3)
 
 plt.tight_layout()
-plt.savefig(f'{SAVE_DIR}/synthetic_training_history.png')
+plt.savefig(f'{SAVE_DIR}/optimized_training_history.png')
 plt.show()
 
 print("\nTEST COMPLETE!")

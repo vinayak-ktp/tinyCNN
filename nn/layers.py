@@ -81,6 +81,97 @@ class Conv2D:
             self.dinputs = self.dinputs_padded
 
 
+class Conv2DOptimized:
+    def __init__(self, n_filters, kernel_size, n_channels, stride=1, padding=0):
+        self.n_filters = n_filters
+        self.kernel_size = kernel_size
+        self.n_channels = n_channels
+        self.stride = stride
+        self.padding = padding
+
+        # He initialization
+        self.W = np.random.randn(n_filters, n_channels, kernel_size, kernel_size) * np.sqrt(2.0 / (n_channels * kernel_size * kernel_size))
+        self.b = np.zeros((n_filters, 1))
+
+    def img_to_col(self, images):
+        batch_size, channels, h, w = images.shape
+
+        h_out = (h + 2*self.padding - self.kernel_size) // self.stride + 1
+        w_out = (w + 2*self.padding - self.kernel_size) // self.stride + 1
+
+        if self.padding > 0:
+            images_padded = np.pad(
+                images,
+                ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding)),
+                mode='constant'
+            )
+        else:
+            images_padded = images
+
+        col = np.zeros((batch_size, channels, self.kernel_size, self.kernel_size, h_out, w_out))
+
+        for i in range(self.kernel_size):
+            i_max = i + self.stride * h_out
+            for j in range(self.kernel_size):
+                j_max = j + self.stride * w_out
+                col[:, :, i, j, :, :] = images_padded[:, :, i:i_max:self.stride, j:j_max:self.stride]
+
+        col = col.transpose(0, 4, 5, 1, 2, 3).reshape(batch_size * h_out * w_out, -1)
+
+        return col, h_out, w_out
+
+    def col_to_img(self, dcol, input_shape):
+        batch_size, channels, h, w = input_shape
+        h_out = (h + 2*self.padding - self.kernel_size) // self.stride + 1
+        w_out = (w + 2*self.padding - self.kernel_size) // self.stride + 1
+
+        dcol = dcol.reshape(batch_size, h_out, w_out, channels, self.kernel_size, self.kernel_size)
+        dcol = dcol.transpose(0, 3, 4, 5, 1, 2)
+
+        if self.padding > 0:
+            dimages = np.zeros((batch_size, channels, h + 2*self.padding, w + 2*self.padding))
+        else:
+            dimages = np.zeros((batch_size, channels, h, w))
+
+        for i in range(self.kernel_size):
+            i_max = i + self.stride * h_out
+            for j in range(self.kernel_size):
+                j_max = j + self.stride * w_out
+                dimages[:, :, i:i_max:self.stride, j:j_max:self.stride] += dcol[:, :, i, j, :, :]
+
+        # Remove padding
+        if self.padding > 0:
+            dimages = dimages[:, :, self.padding:-self.padding, self.padding:-self.padding]
+
+        return dimages
+
+    def forward(self, inputs):
+        self.inputs = inputs
+        batch_size, _, h_in, w_in = inputs.shape
+
+        self.col, h_out, w_out = self.img_to_col(inputs)
+
+        W_col = self.W.reshape(self.n_filters, -1)
+
+        out = self.col @ W_col.T + self.b.T
+
+        self.output = out.reshape(batch_size, h_out, w_out, self.n_filters).transpose(0, 3, 1, 2)
+
+    def backward(self, dvalues):
+        batch_size = dvalues.shape[0]
+
+        dout_reshaped = dvalues.transpose(0, 2, 3, 1).reshape(-1, self.n_filters)
+
+        self.db = np.sum(dout_reshaped, axis=0, keepdims=True).T
+
+        self.dW = (dout_reshaped.T @ self.col).reshape(self.W.shape)
+
+        W_col = self.W.reshape(self.n_filters, -1)
+        dcol = dout_reshaped @ W_col
+
+        self.dinputs = self.col_to_img(dcol, self.inputs.shape)
+
+
 class MaxPool2D:
     def __init__(self, pool_size=2, stride=2):
         self.pool_size = pool_size
